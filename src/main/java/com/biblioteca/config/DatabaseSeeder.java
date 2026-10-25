@@ -25,7 +25,8 @@ public class DatabaseSeeder {
             BibliotecarioRepository bibliotecarioRepository
     ) {
         return args -> {
-            // 1. Crear Administrador
+            // 1. Crear Administrador (solo si no existe)
+            if (!bibliotecarioRepository.existsByCodigoEmpleado("ADM-001")) {
             Bibliotecario admin = new Bibliotecario(
                 "00000000",
                 "admin",
@@ -36,6 +37,7 @@ public class DatabaseSeeder {
             );
             admin.setPassword("admin123");
             bibliotecarioRepository.save(admin);
+            }
 
             // 2. Crear Libros
             List<Libro> libros = new ArrayList<>();
@@ -51,20 +53,28 @@ public class DatabaseSeeder {
             libros.add(new Libro("978-84-123456-10-3", "La Genealogía de la Moral", "Friedrich Nietzsche", "Alianza Editorial", 1887));
 
             for (Libro libro : libros) {
-                libroRepository.save(libro);
+                if (!libroRepository.existsById(libro.getIsbn())) {
+                    libroRepository.save(libro);
+                }
             }
 
             // 3. Crear Ejemplares en estado DISPONIBLE
-            ejemplarRepository.save(new Ejemplar("BC-000101", "A1B2C3D4", "EST-01-A", EstadoEjemplar.DISPONIBLE, libros.get(0)));
-            ejemplarRepository.save(new Ejemplar("BC-000102", "A1B2C3D5", "EST-01-B", EstadoEjemplar.DISPONIBLE, libros.get(1)));
-            ejemplarRepository.save(new Ejemplar("BC-000103", "A1B2C3D6", "EST-01-C", EstadoEjemplar.DISPONIBLE, libros.get(2)));
-            ejemplarRepository.save(new Ejemplar("BC-000104", "A1B2C3D7", "EST-01-D", EstadoEjemplar.DISPONIBLE, libros.get(3)));
-            ejemplarRepository.save(new Ejemplar("BC-000105", "A1B2C3D8", "EST-02-A", EstadoEjemplar.DISPONIBLE, libros.get(4)));
-            ejemplarRepository.save(new Ejemplar("BC-000106", "A1B2C3D9", "EST-02-B", EstadoEjemplar.DISPONIBLE, libros.get(5)));
-            ejemplarRepository.save(new Ejemplar("BC-000107", "A1B2C3DA", "EST-02-C", EstadoEjemplar.DISPONIBLE, libros.get(6)));
-            ejemplarRepository.save(new Ejemplar("BC-000108", "A1B2C3DB", "EST-02-D", EstadoEjemplar.DISPONIBLE, libros.get(7)));
-            ejemplarRepository.save(new Ejemplar("BC-000109", "A1B2C3DC", "EST-03-A", EstadoEjemplar.DISPONIBLE, libros.get(8)));
-            ejemplarRepository.save(new Ejemplar("BC-000110", "A1B2C3DD", "EST-03-B", EstadoEjemplar.DISPONIBLE, libros.get(9)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000101", "A1B2C3D4", "EST-01-A", EstadoEjemplar.DISPONIBLE, libros.get(0)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000102", "A1B2C3D5", "EST-01-B", EstadoEjemplar.DISPONIBLE, libros.get(1)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000103", "A1B2C3D6", "EST-01-C", EstadoEjemplar.DISPONIBLE, libros.get(2)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000104", "A1B2C3D7", "EST-01-D", EstadoEjemplar.DISPONIBLE, libros.get(3)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000105", "A1B2C3D8", "EST-02-A", EstadoEjemplar.DISPONIBLE, libros.get(4)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000106", "A1B2C3D9", "EST-02-B", EstadoEjemplar.DISPONIBLE, libros.get(5)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000107", "A1B2C3DA", "EST-02-C", EstadoEjemplar.DISPONIBLE, libros.get(6)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000108", "A1B2C3DB", "EST-02-D", EstadoEjemplar.DISPONIBLE, libros.get(7)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000109", "A1B2C3DC", "EST-03-A", EstadoEjemplar.DISPONIBLE, libros.get(8)));
+            saveEjemplarIfAbsent(ejemplarRepository, new Ejemplar("BC-000110", "A1B2C3DD", "EST-03-B", EstadoEjemplar.DISPONIBLE, libros.get(9)));
         };
+    }
+
+    private static void saveEjemplarIfAbsent(EjemplarRepository repo, Ejemplar ejemplar) {
+        if (!repo.existsById(ejemplar.getCodigoBarra())) {
+            repo.save(ejemplar);
+        }
     }
 }

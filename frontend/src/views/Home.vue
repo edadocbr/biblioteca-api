@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../api/client.js'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import InlineAlert from '../components/ui/InlineAlert.vue'
@@ -67,7 +68,7 @@ onMounted(async () => {
   document.addEventListener('click', onClickFuera)
   try {
     const params = usuario.value ? `?idLector=${usuario.value.idUsuario}` : ''
-    const res = await fetch(`http://localhost:8080/api/catalogo/libros${params}`)
+    const res = await apiFetch(`/catalogo/libros${params}`)
     if (!res.ok) throw new Error('Error al consultar el catálogo')
 
     const data = await res.json()
@@ -164,7 +165,7 @@ async function solicitarReserva(libro, evt) {
   }
 
   try {
-    const res = await fetch('http://localhost:8080/api/reservas/solicitar', {
+    const res = await apiFetch('/reservas/solicitar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idLibro: libro.id, idLector })

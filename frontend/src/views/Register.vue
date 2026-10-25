@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../api/client.js'
 import { useLectorAuth } from '../composables/useAuth'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,7 +16,7 @@ async function handleSubmit(e) {
   e.preventDefault()
   error.value = ''
   try {
-    const res = await fetch('http://localhost:8080/api/auth/register', {
+    const res = await apiFetch('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

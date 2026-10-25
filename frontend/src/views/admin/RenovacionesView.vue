@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../../api/client.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import DataTable from '../../components/ui/DataTable.vue'
 import KpiCard from '../../components/ui/KpiCard.vue'
@@ -50,7 +51,7 @@ function mapRows(rows = []) {
 
 async function fetchKpis() {
   try {
-    const res = await fetch('http://localhost:8080/api/admin/renovaciones/kpis')
+    const res = await apiFetch('/admin/renovaciones/kpis')
     if (res.ok) kpiData.value = await res.json()
   } catch (e) {}
 }
@@ -63,9 +64,9 @@ async function fetchLoans() {
     const q = loanSearch.value.trim()
     if (q) params.append('q', q)
     const url = params.toString()
-      ? `http://localhost:8080/api/admin/renovaciones?${params.toString()}`
-      : 'http://localhost:8080/api/admin/renovaciones'
-    const res = await fetch(url)
+      ? `/admin/renovaciones?${params.toString()}`
+      : '/admin/renovaciones'
+    const res = await apiFetch(url)
     if (res.ok) {
       const data = await res.json()
       loans.value = mapRows(Array.isArray(data) ? data : [])
@@ -127,7 +128,7 @@ async function saveRenewal() {
 
   isSaving.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/admin/renovaciones', {
+    const res = await apiFetch('/admin/renovaciones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -165,7 +166,7 @@ async function renovarFila(row) {
 
   isSaving.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/admin/renovaciones', {
+    const res = await apiFetch('/admin/renovaciones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

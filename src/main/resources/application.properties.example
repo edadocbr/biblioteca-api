@@ -21,3 +21,6 @@ spring.jpa.properties.hibernate.format_sql=true
 
 # Servidor
 server.port=8080
+
+# CORS (orígenes separados por coma, configurable por variable de entorno)
+app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}

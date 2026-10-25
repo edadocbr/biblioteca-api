@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../api/client.js'
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAdminAuth, useLectorAuth } from '../composables/useAuth'
@@ -13,7 +14,7 @@ async function handleSubmit(e) {
   e.preventDefault()
   error.value = ''
   try {
-    const res = await fetch('http://localhost:8080/api/auth/login', {
+    const res = await apiFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value.trim(), password: password.value })

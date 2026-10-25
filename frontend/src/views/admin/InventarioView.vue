@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../../api/client.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import DataTable from '../../components/ui/DataTable.vue'
 import KpiCard from '../../components/ui/KpiCard.vue'
@@ -48,7 +49,7 @@ function mapToTable(rows = []) {
 
 async function fetchKpis() {
   try {
-    const res = await fetch('http://localhost:8080/api/admin/ejemplares/kpis')
+    const res = await apiFetch('/admin/ejemplares/kpis')
     if (res.ok) {
       const data = await res.json()
       kpiData.value = data
@@ -68,8 +69,8 @@ async function fetchInventory() {
     if (inventoryState.value && inventoryState.value !== 'Todos') {
       params.append('estado', inventoryState.value)
     }
-    const url = params.toString() ? `http://localhost:8080/api/admin/ejemplares?${params.toString()}` : 'http://localhost:8080/api/admin/ejemplares'
-    const res = await fetch(url)
+    const url = params.toString() ? `/admin/ejemplares?${params.toString()}` : '/admin/ejemplares'
+    const res = await apiFetch(url)
     if (res.ok) {
       const data = await res.json()
       inventory.value = mapToTable(Array.isArray(data) ? data : [])
@@ -146,7 +147,7 @@ async function saveAcquisition() {
   }
   isSaving.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/admin/ejemplares/adquirir', {
+    const res = await apiFetch('/admin/ejemplares/adquirir', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

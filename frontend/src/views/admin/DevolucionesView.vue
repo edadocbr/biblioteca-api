@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../../api/client.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import DataTable from '../../components/ui/DataTable.vue'
 import KpiCard from '../../components/ui/KpiCard.vue'
@@ -55,7 +56,7 @@ function mapRows(rows = []) {
 
 async function fetchKpis() {
   try {
-    const res = await fetch('http://localhost:8080/api/admin/devoluciones/kpis')
+    const res = await apiFetch('/admin/devoluciones/kpis')
     if (res.ok) kpiData.value = await res.json()
   } catch (e) {}
 }
@@ -68,9 +69,9 @@ async function fetchReturns() {
     const q = returnSearch.value.trim()
     if (q) params.append('q', q)
     const url = params.toString()
-      ? `http://localhost:8080/api/admin/devoluciones?${params.toString()}`
-      : 'http://localhost:8080/api/admin/devoluciones'
-    const res = await fetch(url)
+      ? `/admin/devoluciones?${params.toString()}`
+      : '/admin/devoluciones'
+    const res = await apiFetch(url)
     if (res.ok) {
       const data = await res.json()
       returns.value = mapRows(Array.isArray(data) ? data : [])
@@ -153,7 +154,7 @@ async function saveReturn() {
 
   isSaving.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/admin/devoluciones', {
+    const res = await apiFetch('/admin/devoluciones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

@@ -1,4 +1,5 @@
 <script setup>
+import { apiFetch } from '../../api/client.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import DataTable from '../../components/ui/DataTable.vue'
 import ModalDialog from '../../components/ui/ModalDialog.vue'
@@ -37,7 +38,7 @@ function mapRows(rows = []) {
 
 async function fetchKpis() {
   try {
-    const res = await fetch('http://localhost:8080/api/admin/prestamos/kpis')
+    const res = await apiFetch('/admin/prestamos/kpis')
     if (res.ok) kpiData.value = await res.json()
   } catch (e) {}
 }
@@ -49,8 +50,8 @@ async function fetchLoans() {
     const params = new URLSearchParams()
     const q = loanSearch.value.trim()
     if (q) params.append('q', q)
-    const url = params.toString() ? `http://localhost:8080/api/admin/prestamos?${params.toString()}` : 'http://localhost:8080/api/admin/prestamos'
-    const res = await fetch(url)
+    const url = params.toString() ? `/admin/prestamos?${params.toString()}` : '/admin/prestamos'
+    const res = await apiFetch(url)
     if (res.ok) {
       const data = await res.json()
       loans.value = mapRows(Array.isArray(data) ? data : [])
@@ -103,7 +104,7 @@ async function saveLoan(){
   const payload = { identificadorLector, codigoBarra, diasPrestamo: Number(form.diasPrestamo)||7, idBibliotecario }
   isSaving.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/admin/prestamos', {
+    const res = await apiFetch('/admin/prestamos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
