@@ -186,10 +186,10 @@ public class DevolucionServiceImpl implements DevolucionService {
                         .findEsperaByLibroIsbnOrderByFechaSolicitudAsc(isbnLibro);
                 if (!reservasEspera.isEmpty()) {
                     Reserva reservaEspera = reservasEspera.get(0);
-                    LocalDate fechaLimiteRecojo = LocalDateTime.now().toLocalDate().plusDays(2);
+                    LocalDateTime fechaLimiteRecojo = LocalDateTime.now().plusHours(48);
                     reservaEspera.setEjemplar(ejemplar);
                     reservaEspera.setEstado(EstadoReserva.LISTA_PARA_RECOJO);
-                    reservaEspera.setFechaExpiracion(fechaLimiteRecojo.atStartOfDay());
+                    reservaEspera.setFechaExpiracion(fechaLimiteRecojo);
                     reservaRepository.save(reservaEspera);
                     ejemplar.setEstado(EstadoEjemplar.RESERVADO);
                     asignadoAReservaEspera = true;

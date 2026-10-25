@@ -137,7 +137,7 @@ async function saveReturn() {
 
   let idBibliotecario = null
   try {
-    const raw = localStorage.getItem('usuario_sgbu')
+    const raw = localStorage.getItem('sgbu_admin_user')
     if (raw) {
       const u = JSON.parse(raw)
       idBibliotecario = u.idUsuario || u.id || null

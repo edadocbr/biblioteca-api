@@ -1,4 +1,5 @@
 <script setup>
+import { useAdminAuth } from '../composables/useAuth'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -9,7 +10,7 @@ const usuario = ref(null)
 
 function cargarUsuario() {
   try {
-    const raw = localStorage.getItem('usuario_sgbu')
+    const raw = localStorage.getItem('sgbu_admin_user')
     if (raw) {
       usuario.value = JSON.parse(raw)
     } else {
@@ -50,7 +51,7 @@ function isActive(item) {
 }
 
 function logout() {
-  localStorage.removeItem('usuario_sgbu')
+  useAdminAuth().logout()
   router.push('/dashboard/login')
 }
 </script>

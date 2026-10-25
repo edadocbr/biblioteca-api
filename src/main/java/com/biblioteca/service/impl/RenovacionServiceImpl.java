@@ -177,17 +177,10 @@ public class RenovacionServiceImpl implements RenovacionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El préstamo ha alcanzado el límite máximo de renovaciones permitidas");
         }
 
-        // 4. Validar reservas pendientes de terceros
-        Prestamo prestamoFinal = prestamo;
-        Ejemplar ej = prestamoFinal.getEjemplar();
-        boolean tieneReservaTerceros = false;
-        if (ej != null && ej.getCodigoBarra() != null) {
-            List<Reserva> reservas = reservaRepository.findByEjemplarCodigoBarraAndEstado(ej.getCodigoBarra(), EstadoReserva.PENDIENTE);
-            tieneReservaTerceros = reservas.stream().anyMatch(r -> r.getLector() != null
-                    && (prestamoFinal.getLector() == null || !r.getLector().getIdUsuario().equals(prestamoFinal.getLector().getIdUsuario())));
-        }
-
-        if (tieneReservaTerceros) {
+        // 4. Validar lectores en lista de espera para el mismo libro
+        Ejemplar ej = prestamo.getEjemplar();
+        String isbn = ej != null && ej.getLibro() != null ? ej.getLibro().getIsbn() : null;
+        if (isbn != null && !reservaRepository.findEsperaByLibroIsbnOrderByFechaSolicitudAsc(isbn).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El material no se puede renovar porque tiene reservas pendientes en espera");
         }
 

@@ -94,7 +94,7 @@ async function saveLoan(){
   if (!identificadorLector || !codigoBarra){ loanFormError.value='Ingresa identificador del lector y código de barras del ejemplar.'; return }
   let idBibliotecario = null
   try {
-    const raw = localStorage.getItem('usuario_sgbu')
+    const raw = localStorage.getItem('sgbu_admin_user')
     if (raw){
       const u = JSON.parse(raw)
       idBibliotecario = u.idUsuario || u.id || null
@@ -115,7 +115,14 @@ async function saveLoan(){
       showToast('Salida registrada correctamente.')
     } else {
       const txt = await res.text().catch(()=> '')
-      loanFormError.value = txt || 'No se pudo registrar el préstamo.'
+      let msg = ''
+      try {
+        const errObj = JSON.parse(txt)
+        msg = errObj.message || errObj.error || ''
+      } catch (_) {
+        msg = txt
+      }
+      loanFormError.value = msg || 'No se pudo registrar el préstamo.'
     }
   } catch(e){
     loanFormError.value = 'Error de conexión con el servidor.'

@@ -18,7 +18,7 @@ const notificacion = ref(null) // { message, variant }
 
 function cargarUsuario() {
   try {
-    const raw = localStorage.getItem('usuario_sgbu')
+    const raw = localStorage.getItem('sgbu_lector_user')
     if (raw) {
       usuario.value = JSON.parse(raw)
     } else {
@@ -34,7 +34,8 @@ function toggleMenu() {
 }
 
 function cerrarSesion() {
-  localStorage.removeItem('usuario_sgbu')
+  localStorage.removeItem('sgbu_lector_user')
+  localStorage.removeItem('sgbu_lector_token')
   usuario.value = null
   menuAbierto.value = false
 }
@@ -137,7 +138,7 @@ async function solicitarReserva(libro, evt) {
   evt.stopPropagation()
   notificacion.value = null
 
-  const raw = localStorage.getItem('usuario_sgbu')
+  const raw = localStorage.getItem('sgbu_lector_user')
   if (!raw) {
     router.push({ path: '/login', query: { redirect: '/' } })
     return

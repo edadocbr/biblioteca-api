@@ -10,6 +10,7 @@ import com.biblioteca.entity.Reserva;
 import com.biblioteca.entity.enums.EstadoEjemplar;
 import com.biblioteca.entity.enums.EstadoPrestamo;
 import com.biblioteca.entity.enums.EstadoReserva;
+import com.biblioteca.entity.enums.EstadoUsuario;
 import com.biblioteca.repository.BibliotecarioRepository;
 import com.biblioteca.repository.EjemplarRepository;
 import com.biblioteca.repository.LectorRepository;
@@ -64,11 +65,15 @@ public class ReservaServiceImpl implements ReservaService {
         Long idLector = request.getIdLector();
 
         if (bibliotecarioRepository.existsById(idLector)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo los usuarios con rol Lector pueden solicitar o reservar material");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Operación exclusiva para lectores");
         }
 
         Lector lector = lectorRepository.findById(idLector)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo los usuarios con rol Lector pueden solicitar o reservar material"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Operación exclusiva para lectores"));
+
+        if (lector.getEstado() != EstadoUsuario.ACTIVO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Operación exclusiva para lectores activos");
+        }
 
         Libro libro = libroRepository.findById(isbn)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Libro no encontrado"));
@@ -105,7 +110,7 @@ public class ReservaServiceImpl implements ReservaService {
         }
 
         LocalDateTime ahora = LocalDateTime.now();
-        LocalDate fechaLimiteRecojo = ahora.toLocalDate().plusDays(2);
+        LocalDateTime fechaLimiteRecojo = ahora.plusHours(48);
 
         // 4. Evaluar ejemplares y stock
         List<Ejemplar> disponibles = ejemplarRepository.findByLibroIsbnAndEstado(isbn, EstadoEjemplar.DISPONIBLE);
@@ -114,7 +119,7 @@ public class ReservaServiceImpl implements ReservaService {
         reserva.setLector(lector);
         reserva.setLibro(libro);
         reserva.setFechaSolicitud(ahora);
-        reserva.setFechaExpiracion(fechaLimiteRecojo.atStartOfDay());
+        reserva.setFechaExpiracion(fechaLimiteRecojo);
 
         if (!disponibles.isEmpty()) {
             Ejemplar ejemplar = disponibles.get(0);
@@ -136,7 +141,7 @@ public class ReservaServiceImpl implements ReservaService {
         return new SolicitarReservaResponse(
                 reserva.getEstado().name(),
                 mensaje,
-                reserva.getEstado() == EstadoReserva.LISTA_PARA_RECOJO ? fechaLimiteRecojo : null
+                reserva.getEstado() == EstadoReserva.LISTA_PARA_RECOJO ? fechaLimiteRecojo.toLocalDate() : null
         );
     }
 }

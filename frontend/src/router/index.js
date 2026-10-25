@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAdminAuth } from '../composables/useAuth'
 import Home from '../views/Home.vue'
 import LoginView from '../views/Login.vue'
 import RegisterView from '../views/Register.vue'
@@ -56,33 +57,9 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth) {
-    try {
-      const raw = localStorage.getItem('usuario_sgbu')
-      if (!raw) {
-        return { name: 'admin-login' }
-      }
-      const usuario = JSON.parse(raw)
-      if (!usuario || usuario.rol !== 'BIBLIOTECARIO') {
-        return { name: 'admin-login' }
-      }
-    } catch {
+  if (to.meta.requiresAuth || to.path.startsWith('/admin')) {
+    if (!useAdminAuth().isAuthenticated()) {
       return { name: 'admin-login' }
-    }
-  }
-
-  if (to.path.startsWith('/admin')) {
-    try {
-      const raw = localStorage.getItem('usuario_sgbu')
-      if (!raw) {
-        return { path: '/login' }
-      }
-      const usuario = JSON.parse(raw)
-      if (!usuario || usuario.rol !== 'BIBLIOTECARIO') {
-        return { path: '/login' }
-      }
-    } catch {
-      return { path: '/login' }
     }
   }
 })

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAdminAuth, useLectorAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,12 +20,13 @@ async function handleSubmit(e) {
     })
     if (res.ok) {
       const data = await res.json()
-      localStorage.setItem('usuario_sgbu', JSON.stringify(data))
 
       if (data && data.rol === 'BIBLIOTECARIO') {
-        router.push('/dashboard')
+        useAdminAuth().login(data)
+        router.push('/dashboard/prestamos')
         return
       }
+      useLectorAuth().login(data)
 
       const redirect = route.query.redirect
       if (redirect) {

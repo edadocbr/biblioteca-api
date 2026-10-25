@@ -1,4 +1,5 @@
 <script setup>
+import { useAdminAuth } from '../../composables/useAuth'
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 
@@ -25,7 +26,7 @@ async function handleLogin(e) {
     if (res.ok) {
       const data = await res.json()
       if (data && data.rol === 'BIBLIOTECARIO') {
-        localStorage.setItem('usuario_sgbu', JSON.stringify(data))
+        useAdminAuth().login(data)
         router.push('/dashboard')
         return
       }

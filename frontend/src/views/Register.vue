@@ -1,4 +1,5 @@
 <script setup>
+import { useLectorAuth } from '../composables/useAuth'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -27,7 +28,7 @@ async function handleSubmit(e) {
     })
     if (res.ok) {
       const data = await res.json()
-      localStorage.setItem('usuario_sgbu', JSON.stringify(data))
+      useLectorAuth().login(data)
       router.push('/')
       return
     }
