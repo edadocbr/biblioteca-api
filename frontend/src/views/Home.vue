@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import InlineAlert from '../components/ui/InlineAlert.vue'
+import Toast from '../components/ui/Toast.vue'
 
 const router = useRouter()
 
@@ -12,6 +14,7 @@ const cargando = ref(true)
 
 const usuario = ref(null)
 const menuAbierto = ref(false)
+const notificacion = ref(null) // { message, variant }
 
 function cargarUsuario() {
   try {
@@ -43,10 +46,13 @@ function onClickFuera(e) {
   }
 }
 
-// Imagen estática compartida para cubrir la falta de campo en el modelo de base de datos
+function showNotificacion(message, variant = 'error') {
+  notificacion.value = { message, variant }
+  setTimeout(() => { notificacion.value = null }, 5000)
+}
+
 const PORTADA_DEFAULT = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80'
 
-// Estado reactivo que ahora se alimenta de MariaDB
 const libros = ref([])
 
 onUnmounted(() => {
@@ -59,25 +65,29 @@ onMounted(async () => {
   window.addEventListener('storage', cargarUsuario)
   document.addEventListener('click', onClickFuera)
   try {
-    const res = await fetch('http://localhost:8080/api/libros')
+    const params = usuario.value ? `?idLector=${usuario.value.idUsuario}` : ''
+    const res = await fetch(`http://localhost:8080/api/catalogo/libros${params}`)
     if (!res.ok) throw new Error('Error al consultar el catálogo')
-    
+
     const data = await res.json()
 
-    // Adaptamos el DTO de Spring Boot al formato visual que consume el template
     libros.value = data.map((item, index) => ({
       id: item.isbn,
+      isbn: item.isbn,
       titulo: item.titulo,
       autor: item.autor,
       anio: item.anioPublicacion,
-      isbn: item.isbn,
-      categoria: categorias[(index % 4) + 1], // Distribución visual entre las categorías existentes
-      estado: item.ejemplaresDisponibles > 0 ? 'Disponible' : 'En préstamo',
-      sinopsis: `Obra publicada por la editorial ${item.editorial}. Ejemplares registrados en el sistema: ${item.ejemplaresDisponibles} unidad(es) disponible(s).`,
+      categoria: categorias[(index % 4) + 1],
+      stockTotal: item.stockTotal,
+      stockDisponible: item.stockDisponible,
+      estadoSolicitud: item.estadoSolicitud || null,
+      estado: item.stockDisponible > 0 ? 'Disponible' : 'Sin stock',
+      sinopsis: `Obra publicada por la editorial ${item.editorial}. Ejemplares registrados en el sistema: ${item.stockDisponible} unidad(es) disponible(s).`,
       portada: PORTADA_DEFAULT
     }))
   } catch (error) {
     console.error('Error cargando libros desde la base de datos:', error)
+    showNotificacion('No se pudo cargar el catálogo de libros.')
   } finally {
     cargando.value = false
   }
@@ -97,7 +107,23 @@ const librosFiltrados = computed(() => {
   })
 })
 
-const totalDisponibles = computed(() => libros.value.filter((l) => l.estado === 'Disponible').length)
+const totalDisponibles = computed(() => libros.value.filter((l) => l.stockDisponible > 0).length)
+
+function estadoBoton(libro) {
+  if (usuario.value && usuario.value.rol === 'BIBLIOTECARIO') {
+    return { label: 'Modo Administrador', disabled: true, variant: 'disabled' }
+  }
+  if (libro.estadoSolicitud === 'LISTA_PARA_RECOJO') {
+    return { label: 'Listo para recojo (En ventanilla)', disabled: true, variant: 'disabled' }
+  }
+  if (libro.estadoSolicitud === 'EN_ESPERA') {
+    return { label: 'En lista de espera', disabled: true, variant: 'disabled' }
+  }
+  if (libro.stockDisponible > 0) {
+    return { label: 'Solicitar préstamo', disabled: false, variant: 'active' }
+  }
+  return { label: 'Reservar ejemplar', disabled: false, variant: 'active' }
+}
 
 function abrirDetalle(libro) {
   libroSeleccionado.value = libro
@@ -107,8 +133,64 @@ function cerrarDetalle() {
   libroSeleccionado.value = null
 }
 
-function reservarEjemplar() {
-  router.push('/login')
+async function solicitarReserva(libro, evt) {
+  evt.stopPropagation()
+  notificacion.value = null
+
+  const raw = localStorage.getItem('usuario_sgbu')
+  if (!raw) {
+    router.push({ path: '/login', query: { redirect: '/' } })
+    return
+  }
+
+  let sesion
+  try {
+    sesion = JSON.parse(raw)
+  } catch {
+    router.push({ path: '/login', query: { redirect: '/' } })
+    return
+  }
+
+  if (sesion && sesion.rol === 'BIBLIOTECARIO') {
+    showNotificacion('Los bibliotecarios no pueden realizar solicitudes de reserva o préstamo.')
+    return
+  }
+
+  const idLector = sesion.idUsuario
+  if (!idLector) {
+    showNotificacion('Sesión inválida. Inicia sesión de nuevo.')
+    return
+  }
+
+  try {
+    const res = await fetch('http://localhost:8080/api/reservas/solicitar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idLibro: libro.id, idLector })
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      const idx = libros.value.findIndex((l) => l.id === libro.id)
+      if (idx !== -1) {
+        libros.value[idx].estadoSolicitud = data.estado
+      }
+      if (libroSeleccionado.value && libroSeleccionado.value.id === libro.id) {
+        libroSeleccionado.value.estadoSolicitud = data.estado
+      }
+      showNotificacion(data.mensaje || 'Solicitud registrada correctamente.', 'success')
+    } else {
+      const txt = await res.text().catch(() => '')
+      try {
+        const errObj = JSON.parse(txt)
+        showNotificacion(errObj.message || errObj.error || 'No se pudo procesar la solicitud.')
+      } catch (_) {
+        showNotificacion(txt || 'No se pudo procesar la solicitud.')
+      }
+    }
+  } catch (e) {
+    showNotificacion('Error de conexión con el servidor.')
+  }
 }
 </script>
 
@@ -201,6 +283,15 @@ function reservarEjemplar() {
 
     <main>
       <div class="max-w-7xl mx-auto px-6 py-12">
+        <InlineAlert
+          v-if="notificacion"
+          :variant="notificacion.variant"
+          dismissible
+          @dismiss="notificacion = null"
+        >
+          {{ notificacion.message }}
+        </InlineAlert>
+
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           <article
             v-for="libro in librosFiltrados"
@@ -234,6 +325,19 @@ function reservarEjemplar() {
                   {{ libro.estado }}
                 </span>
               </div>
+              <button
+                type="button"
+                :disabled="estadoBoton(libro).disabled"
+                @click="solicitarReserva(libro, $event)"
+                class="w-full mt-2 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors"
+                :class="
+                  estadoBoton(libro).variant === 'disabled'
+                    ? 'border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                    : 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800'
+                "
+              >
+                {{ estadoBoton(libro).label }}
+              </button>
             </div>
           </article>
         </div>
@@ -330,6 +434,12 @@ function reservarEjemplar() {
                     {{ libroSeleccionado.estado }}
                   </dd>
                 </div>
+                <div class="grid grid-cols-2 gap-4 border-b border-neutral-200 py-3">
+                  <dt class="text-xs uppercase tracking-widest font-mono text-neutral-500">Solicitud</dt>
+                  <dd class="text-xs uppercase tracking-widest font-mono text-right text-neutral-600">
+                    {{ libroSeleccionado.estadoSolicitud || '—' }}
+                  </dd>
+                </div>
               </dl>
             </div>
             <div class="mt-8">
@@ -344,15 +454,28 @@ function reservarEjemplar() {
           <div class="border-t border-neutral-200 px-6 py-4">
             <button
               type="button"
-              class="w-full bg-neutral-900 text-white px-4 py-2 text-sm tracking-wide transition-colors duration-150 ease-out hover:bg-neutral-800 active:scale-[0.99]"
-              @click="reservarEjemplar"
+              :disabled="estadoBoton(libroSeleccionado).disabled"
+              @click="solicitarReserva(libroSeleccionado, $event)"
+              class="w-full border px-4 py-2 text-sm tracking-wide transition-colors"
+              :class="
+                estadoBoton(libroSeleccionado).variant === 'disabled'
+                  ? 'border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                  : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-[0.99]'
+              "
             >
-              Reservar ejemplar
+              {{ estadoBoton(libroSeleccionado).label }}
             </button>
           </div>
         </div>
       </aside>
     </Transition>
+
+    <Toast
+      :open="!!notificacion"
+      :message="notificacion ? notificacion.message : ''"
+      :variant="notificacion ? notificacion.variant : 'success'"
+      @close="notificacion = null"
+    />
   </div>
 </template>
 

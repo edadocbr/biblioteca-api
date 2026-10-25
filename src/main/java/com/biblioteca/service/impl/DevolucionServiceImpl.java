@@ -7,12 +7,15 @@ import com.biblioteca.entity.Ejemplar;
 import com.biblioteca.entity.Lector;
 import com.biblioteca.entity.Libro;
 import com.biblioteca.entity.Prestamo;
+import com.biblioteca.entity.Reserva;
 import com.biblioteca.entity.Sancion;
 import com.biblioteca.entity.enums.EstadoEjemplar;
 import com.biblioteca.entity.enums.EstadoPrestamo;
+import com.biblioteca.entity.enums.EstadoReserva;
 import com.biblioteca.repository.BibliotecarioRepository;
 import com.biblioteca.repository.EjemplarRepository;
 import com.biblioteca.repository.PrestamoRepository;
+import com.biblioteca.repository.ReservaRepository;
 import com.biblioteca.repository.SancionRepository;
 import com.biblioteca.service.DevolucionService;
 import org.springframework.http.HttpStatus;
@@ -36,15 +39,18 @@ public class DevolucionServiceImpl implements DevolucionService {
     private final EjemplarRepository ejemplarRepository;
     private final BibliotecarioRepository bibliotecarioRepository;
     private final SancionRepository sancionRepository;
+    private final ReservaRepository reservaRepository;
 
     public DevolucionServiceImpl(PrestamoRepository prestamoRepository,
                                  EjemplarRepository ejemplarRepository,
                                  BibliotecarioRepository bibliotecarioRepository,
-                                 SancionRepository sancionRepository) {
+                                 SancionRepository sancionRepository,
+                                 ReservaRepository reservaRepository) {
         this.prestamoRepository = prestamoRepository;
         this.ejemplarRepository = ejemplarRepository;
         this.bibliotecarioRepository = bibliotecarioRepository;
         this.sancionRepository = sancionRepository;
+        this.reservaRepository = reservaRepository;
     }
 
     @Override
@@ -171,11 +177,32 @@ public class DevolucionServiceImpl implements DevolucionService {
 
         Ejemplar ejemplar = prestamo.getEjemplar();
         if (ejemplar != null) {
-            String conservacion = request.getEstadoConservacion() != null ? request.getEstadoConservacion().trim().toUpperCase(Locale.ROOT) : "BUENO";
-            if ("DANADO".equals(conservacion) || "DAÑADO".equals(conservacion) || "BAJA".equals(conservacion)) {
-                ejemplar.setEstado(EstadoEjemplar.PERDIDO);
-            } else {
-                ejemplar.setEstado(EstadoEjemplar.DISPONIBLE);
+            String isbnLibro = ejemplar.getLibro() != null ? ejemplar.getLibro().getIsbn() : null;
+
+            // Antes de liberar el ejemplar, verificar si hay reservas en espera para este libro
+            boolean asignadoAReservaEspera = false;
+            if (isbnLibro != null) {
+                List<Reserva> reservasEspera = reservaRepository
+                        .findEsperaByLibroIsbnOrderByFechaSolicitudAsc(isbnLibro);
+                if (!reservasEspera.isEmpty()) {
+                    Reserva reservaEspera = reservasEspera.get(0);
+                    LocalDate fechaLimiteRecojo = LocalDateTime.now().toLocalDate().plusDays(2);
+                    reservaEspera.setEjemplar(ejemplar);
+                    reservaEspera.setEstado(EstadoReserva.LISTA_PARA_RECOJO);
+                    reservaEspera.setFechaExpiracion(fechaLimiteRecojo.atStartOfDay());
+                    reservaRepository.save(reservaEspera);
+                    ejemplar.setEstado(EstadoEjemplar.RESERVADO);
+                    asignadoAReservaEspera = true;
+                }
+            }
+
+            if (!asignadoAReservaEspera) {
+                String conservacion = request.getEstadoConservacion() != null ? request.getEstadoConservacion().trim().toUpperCase(Locale.ROOT) : "BUENO";
+                if ("DANADO".equals(conservacion) || "DAÑADO".equals(conservacion) || "BAJA".equals(conservacion)) {
+                    ejemplar.setEstado(EstadoEjemplar.PERDIDO);
+                } else {
+                    ejemplar.setEstado(EstadoEjemplar.DISPONIBLE);
+                }
             }
             ejemplarRepository.save(ejemplar);
         }

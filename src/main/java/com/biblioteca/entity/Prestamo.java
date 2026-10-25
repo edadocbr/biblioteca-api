@@ -52,11 +52,17 @@ public class Prestamo {
     public LocalDateTime getFechaDevolucionProgramada() { return fechaDevolucionProgramada; }
     public void setFechaDevolucionProgramada(LocalDateTime fechaDevolucionProgramada) { this.fechaDevolucionProgramada = fechaDevolucionProgramada; }
 
+    public LocalDateTime getFechaDevolucionPactada() { return fechaDevolucionProgramada; }
+    public void setFechaDevolucionPactada(LocalDateTime fechaDevolucionPactada) { this.fechaDevolucionProgramada = fechaDevolucionPactada; }
+
     public LocalDateTime getFechaDevolucionReal() { return fechaDevolucionReal; }
     public void setFechaDevolucionReal(LocalDateTime fechaDevolucionReal) { this.fechaDevolucionReal = fechaDevolucionReal; }
 
     public Integer getContadorRenovaciones() { return contadorRenovaciones; }
     public void setContadorRenovaciones(Integer contadorRenovaciones) { this.contadorRenovaciones = contadorRenovaciones; }
+
+    public Integer getRenovaciones() { return contadorRenovaciones != null ? contadorRenovaciones : 0; }
+    public void setRenovaciones(Integer renovaciones) { this.contadorRenovaciones = renovaciones; }
 
     public EstadoPrestamo getEstado() { return estado; }
     public void setEstado(EstadoPrestamo estado) { this.estado = estado; }

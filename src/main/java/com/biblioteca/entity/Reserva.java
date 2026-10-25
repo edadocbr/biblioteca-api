@@ -27,8 +27,12 @@ public class Reserva {
     private Lector lector;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "codigo_barra_ejemplar", nullable = false)
+    @JoinColumn(name = "codigo_barra_ejemplar", nullable = true)
     private Ejemplar ejemplar;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "libro_isbn", nullable = true)
+    private Libro libro;
 
     public Reserva() {}
 
@@ -50,4 +54,7 @@ public class Reserva {
 
     public Ejemplar getEjemplar() { return ejemplar; }
     public void setEjemplar(Ejemplar ejemplar) { this.ejemplar = ejemplar; }
+
+    public Libro getLibro() { return libro; }
+    public void setLibro(Libro libro) { this.libro = libro; }
 }

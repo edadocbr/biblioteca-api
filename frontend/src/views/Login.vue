@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const error = ref('')
@@ -19,14 +20,18 @@ async function handleSubmit(e) {
     if (res.ok) {
       const data = await res.json()
       localStorage.setItem('usuario_sgbu', JSON.stringify(data))
+
       if (data && data.rol === 'BIBLIOTECARIO') {
-        router.push('/admin')
+        router.push('/dashboard')
         return
       }
-      if (data && data.rol === 'LECTOR') {
-        router.push('/')
+
+      const redirect = route.query.redirect
+      if (redirect) {
+        router.push(redirect.toString())
         return
       }
+
       router.push('/')
       return
     }

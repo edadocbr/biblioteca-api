@@ -19,5 +19,7 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
     @Query("SELECT p FROM Prestamo p WHERE (p.ejemplar.codigoBarra = :codigo OR p.ejemplar.tagRfid = :codigo) AND p.fechaDevolucionReal IS NULL AND p.estado IN (com.biblioteca.entity.enums.EstadoPrestamo.ACTIVO, com.biblioteca.entity.enums.EstadoPrestamo.RENOVADO, com.biblioteca.entity.enums.EstadoPrestamo.VENCIDO)")
     List<Prestamo> findActivosByCodigoEjemplar(@Param("codigo") String codigo);
 
+    List<Prestamo> findByFechaDevolucionRealIsNull();
+
     List<Prestamo> findByFechaDevolucionRealIsNotNullOrderByFechaDevolucionRealDesc();
 }

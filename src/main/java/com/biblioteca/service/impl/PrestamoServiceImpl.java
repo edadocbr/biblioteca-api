@@ -8,13 +8,16 @@ import com.biblioteca.entity.Ejemplar;
 import com.biblioteca.entity.Lector;
 import com.biblioteca.entity.Libro;
 import com.biblioteca.entity.Prestamo;
+import com.biblioteca.entity.Reserva;
 import com.biblioteca.entity.enums.EstadoEjemplar;
 import com.biblioteca.entity.enums.EstadoPrestamo;
+import com.biblioteca.entity.enums.EstadoReserva;
 import com.biblioteca.entity.enums.EstadoUsuario;
 import com.biblioteca.repository.BibliotecarioRepository;
 import com.biblioteca.repository.EjemplarRepository;
 import com.biblioteca.repository.LectorRepository;
 import com.biblioteca.repository.PrestamoRepository;
+import com.biblioteca.repository.ReservaRepository;
 import com.biblioteca.service.PrestamoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,12 +37,14 @@ public class PrestamoServiceImpl implements PrestamoService {
     private final LectorRepository lectorRepository;
     private final EjemplarRepository ejemplarRepository;
     private final BibliotecarioRepository bibliotecarioRepository;
+    private final ReservaRepository reservaRepository;
 
-    public PrestamoServiceImpl(PrestamoRepository prestamoRepository, LectorRepository lectorRepository, EjemplarRepository ejemplarRepository, BibliotecarioRepository bibliotecarioRepository) {
+    public PrestamoServiceImpl(PrestamoRepository prestamoRepository, LectorRepository lectorRepository, EjemplarRepository ejemplarRepository, BibliotecarioRepository bibliotecarioRepository, ReservaRepository reservaRepository) {
         this.prestamoRepository = prestamoRepository;
         this.lectorRepository = lectorRepository;
         this.ejemplarRepository = ejemplarRepository;
         this.bibliotecarioRepository = bibliotecarioRepository;
+        this.reservaRepository = reservaRepository;
     }
 
     @Override
@@ -159,7 +164,32 @@ public class PrestamoServiceImpl implements PrestamoService {
         }
 
         Ejemplar ejemplar = ejemplarRepository.findById(codBarra).orElse(null);
-        if (ejemplar == null || ejemplar.getEstado() != EstadoEjemplar.DISPONIBLE) {
+        if (ejemplar == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ejemplar no existe");
+        }
+
+        Reserva reservaAsociada = null;
+        if (ejemplar.getEstado() == EstadoEjemplar.DISPONIBLE) {
+            // Permitido directamente
+        } else if (ejemplar.getEstado() == EstadoEjemplar.RESERVADO) {
+            List<Reserva> reservasActivas = reservaRepository.findByEjemplarCodigoBarraAndEstadoIn(
+                    codBarra,
+                    List.of(EstadoReserva.LISTA_PARA_RECOJO, EstadoReserva.PENDIENTE)
+            );
+
+            if (reservasActivas.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ejemplar está reservado pero no cuenta con una reserva activa asociada");
+            }
+
+            reservaAsociada = reservasActivas.stream()
+                    .filter(r -> r.getLector() != null && r.getLector().getIdUsuario().equals(lector.getIdUsuario()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (reservaAsociada == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ejemplar está reservado para otro lector");
+            }
+        } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ejemplar no está disponible para préstamo");
         }
 
@@ -178,6 +208,11 @@ public class PrestamoServiceImpl implements PrestamoService {
         prestamo.setLector(lector);
         prestamo.setEjemplar(ejemplar);
         prestamo.setBibliotecario(bibliotecario);
+
+        if (reservaAsociada != null) {
+            reservaAsociada.setEstado(EstadoReserva.COMPLETADA);
+            reservaRepository.save(reservaAsociada);
+        }
 
         ejemplar.setEstado(EstadoEjemplar.PRESTADO);
         ejemplarRepository.save(ejemplar);

@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface EjemplarRepository extends JpaRepository<Ejemplar, String> {
     Optional<Ejemplar> findByTagRfid(String tagRfid);
     List<Ejemplar> findByLibroIsbn(String isbn);
+    List<Ejemplar> findByLibroIsbnAndEstado(String isbn, EstadoEjemplar estado);
     List<Ejemplar> findByEstado(EstadoEjemplar estado);
     long countByLibroIsbnAndEstado(String isbn, EstadoEjemplar estado);
+    long countByLibroIsbn(String isbn);
 }
